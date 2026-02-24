@@ -89,7 +89,9 @@ If you later use a custom API domain (e.g. `https://api.peesandqueues.app`), upd
 **Option A – Proxy in Vercel (recommended)**  
 The repo includes `frontend/vercel.json` with rewrites so that `/api` and `/webhooks` are forwarded to your backend.
 
-- Open **frontend/vercel.json** and replace `peesandqueues-api.onrender.com` with your actual Render service hostname (e.g. from the Render dashboard URL, or use `api.peesandqueues.app` once you’ve set up that custom domain).
+- Open **frontend/vercel.json** and set the `destination` URLs to your **exact** Render service hostname (from the Render dashboard, e.g. `https://your-service-name.onrender.com`). If the hostname is wrong, Create Trip will get “Not Found” or invalid JSON errors.
+- On Render’s **free tier**, the service spins down after ~15 min idle. The first request after that may take 30–60 seconds and can return an error or non-JSON; wait and try again.
+- To confirm the backend is up, open `https://YOUR-RENDER-URL/api/health` in a browser; you should see `{"ok":true}`.
 - Deploy. The browser will request `https://peesandqueues.app/api/...` and Vercel will proxy to your Render backend. No frontend code changes needed.
 
 **Option B – Call API by absolute URL**  

@@ -32,7 +32,20 @@ export default function CreateTrip() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: tripName, bathrooms: bathNames.map((name) => ({ name })) }),
       });
-      const data = await res.json();
+      const text = await res.text();
+      let data;
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        if (!res.ok) {
+          if (res.status === 404) setError('API not found. Check that your backend is deployed and the API URL in vercel.json matches your Render service.');
+          else if (res.status >= 502 && res.status <= 504) setError('Backend is starting or busy. Wait a moment and try again.');
+          else setError(`Server error (${res.status}). Try again in a moment.`);
+          return;
+        }
+        setError('Invalid response from server. Try again.');
+        return;
+      }
       if (!res.ok) throw new Error(data.error || 'Failed to create trip');
       setResult(data);
     } catch (err) {
