@@ -7,7 +7,7 @@ export default function Logo({ size = 'corner' }) {
     <img
       src="/logo.png"
       alt="Pees & Queues"
-      className={isHero ? 'w-64 max-w-[85vw] h-auto' : 'h-10 w-auto'}
+      className={isHero ? 'w-80 max-w-[90vw] h-auto' : 'h-14 w-auto'}
     />
   );
   return isHero ? (
