@@ -22,7 +22,7 @@ export async function runReminderJob() {
     const { data: bath } = q ? await db.from('bathrooms').select('name').eq('id', q.bathroom_id).single() : { data: null };
     const bathroomName = bath?.name || 'bathroom';
     if (p?.phone) {
-      await sendSms(p.phone, `Still using ${bathroomName}? Reply DONE when finished.`);
+      await sendSms(p.phone, `Still using ${bathroomName}? Reply DONE when finished.`, { participantId: entry.participant_id });
       await db.from('queue_entries').update({ reminder_sent_at: new Date().toISOString() }).eq('id', entry.id);
     }
   }

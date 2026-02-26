@@ -15,9 +15,15 @@ export default function Home() {
         </Link>
         <p className="text-[#7d6b8a] text-sm text-center">or open an invite link from your host to join</p>
       </div>
-      <footer className="mt-auto pt-12">
+      <footer className="mt-auto pt-12 flex flex-wrap justify-center gap-x-4 gap-y-1">
         <Link to="/about" className="text-[#7d6b8a] hover:text-[#5a4a6a] text-sm">
-          About Pees and Queues
+          About
+        </Link>
+        <Link to="/terms" className="text-[#7d6b8a] hover:text-[#5a4a6a] text-sm">
+          Terms
+        </Link>
+        <Link to="/privacy" className="text-[#7d6b8a] hover:text-[#5a4a6a] text-sm">
+          Privacy
         </Link>
       </footer>
     </div>

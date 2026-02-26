@@ -9,9 +9,15 @@ export default function PageLayout({ children }) {
         <Logo size="corner" />
       </header>
       <main className="flex-1">{children}</main>
-      <footer className="mt-8 pt-6 border-t border-[#e5dfed]">
+      <footer className="mt-8 pt-6 border-t border-[#e5dfed] flex flex-wrap gap-x-4 gap-y-1">
         <Link to="/about" className="text-[#7d6b8a] hover:text-[#5a4a6a] text-sm">
-          About Pees and Queues
+          About
+        </Link>
+        <Link to="/terms" className="text-[#7d6b8a] hover:text-[#5a4a6a] text-sm">
+          Terms
+        </Link>
+        <Link to="/privacy" className="text-[#7d6b8a] hover:text-[#5a4a6a] text-sm">
+          Privacy
         </Link>
       </footer>
     </div>

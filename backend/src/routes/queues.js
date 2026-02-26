@@ -5,7 +5,7 @@ import { sendSms } from '../lib/sms.js';
 
 async function notifyTurn(participantId, bathroomName) {
   const { data: p } = await db.from('participants').select('phone').eq('id', participantId).single();
-  if (p?.phone) await sendSms(p.phone, `You're up for ${bathroomName}! Reply DONE when finished.`);
+  if (p?.phone) await sendSms(p.phone, `You're up for ${bathroomName}! Reply DONE when finished.`, { participantId });
 }
 
 export async function queuesRoutes(fastify) {

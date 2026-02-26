@@ -60,6 +60,22 @@ export async function twilioWebhook(fastify) {
     const cmd = body.toUpperCase().trim();
     let responseText = '';
 
+    const optOutCommands = ['STOP', 'UNSUBSCRIBE', 'CANCEL', 'END', 'QUIT'];
+    if (optOutCommands.includes(cmd)) {
+      await db.from('participants').update({ sms_opt_out: true }).eq('id', participant.id);
+      responseText = "You've been unsubscribed. You won't receive further messages for this trip. Rejoin via your host's invite link to get messages again.";
+      const response = twiML(responseText);
+      await db.from('sms_log').insert({
+        twilio_sid: messageSid,
+        trip_id: tripId,
+        participant_id: participant.id,
+        direction: 'in',
+        body: body?.slice(0, 500),
+        response_body: response,
+      });
+      return reply.type('text/xml').send(response);
+    }
+
     if (cmd === 'HELP' || cmd === '') {
       responseText = HELP_TEXT;
     } else if (cmd === 'STATUS') {
@@ -83,7 +99,7 @@ export async function twilioWebhook(fastify) {
         responseText = 'Done! Next person notified.';
         if (result.nextActive) {
           const { data: p } = await db.from('participants').select('phone').eq('id', result.nextActive.participantId).single();
-          if (p?.phone) await sendSms(p.phone, `You're up for ${bath?.name || 'bathroom'}! Reply DONE when finished.`);
+          if (p?.phone) await sendSms(p.phone, `You're up for ${bath?.name || 'bathroom'}! Reply DONE when finished.`, { participantId: result.nextActive.participantId });
         }
       }
     } else if (cmd.startsWith('JOIN')) {
@@ -116,7 +132,7 @@ export async function twilioWebhook(fastify) {
           } else {
             responseText = `You're in line for ${b?.name || 'bathroom'}. We'll text when it's your turn.`;
             const { data: p } = await db.from('participants').select('phone').eq('id', result.nextActive.participantId).single();
-            if (p?.phone) await sendSms(p.phone, `You're up for ${b?.name || 'bathroom'}! Reply DONE when finished.`);
+            if (p?.phone) await sendSms(p.phone, `You're up for ${b?.name || 'bathroom'}! Reply DONE when finished.`, { participantId: result.nextActive.participantId });
           }
         } else {
           const { data: b } = await db.from('queues').select('bathroom_id').eq('id', queueId).single();
