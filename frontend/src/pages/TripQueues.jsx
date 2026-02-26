@@ -11,6 +11,7 @@ export default function TripQueues() {
   const [tripExpired, setTripExpired] = useState(false);
   const [queues, setQueues] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [confirmingPayment, setConfirmingPayment] = useState(false);
   const [participantId, setParticipantId] = useState(() => location.state?.participantId || sessionStorage.getItem(`trip:${tripId}:participantId`) || '');
   const [error, setError] = useState('');
 
@@ -18,24 +19,70 @@ export default function TripQueues() {
 
   useEffect(() => {
     let cancelled = false;
-    const load = async () => {
+    const searchParams = new URLSearchParams(location.search);
+    const justPaid = searchParams.get('paid') === '1';
+
+    const load = async (isRetry = false) => {
       const tripRes = await fetch(`/api/trips/${tripId}`);
       const tripData = await tripRes.json();
       if (cancelled) return;
       if (tripRes.status === 410) {
         setTripExpired(true);
         setTrip(null);
+        setConfirmingPayment(false);
+      } else if (tripRes.status === 402 && justPaid && !isRetry) {
+        setConfirmingPayment(true);
+        setLoading(false);
+        return;
       } else if (tripData.id) {
         setTrip(tripData);
+        setConfirmingPayment(false);
         const qRes = await fetch(`/api/trips/${tripId}/queues`);
         const qData = await qRes.json();
         if (!cancelled) setQueues(qData);
-      } else setTrip(null);
+      } else if (!justPaid) {
+        setTrip(null);
+      }
       if (!cancelled) setLoading(false);
     };
+
     load();
     return () => { cancelled = true; };
   }, [tripId]);
+
+  // After payment redirect: poll until webhook marks trip paid (402 → 200) or give up
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    if (searchParams.get('paid') !== '1' || !confirmingPayment) return;
+    let cancelled = false;
+    let attempts = 0;
+    const maxAttempts = 15;
+    const poll = async () => {
+      while (!cancelled && attempts < maxAttempts) {
+        await new Promise((r) => setTimeout(r, 2000));
+        if (cancelled) return;
+        attempts++;
+        const tripRes = await fetch(`/api/trips/${tripId}`);
+        const tripData = await tripRes.json();
+        if (cancelled) return;
+        if (tripRes.ok && tripData.id) {
+          setTrip(tripData);
+          setConfirmingPayment(false);
+          setLoading(false);
+          const qRes = await fetch(`/api/trips/${tripId}/queues`);
+          const qData = await qRes.json();
+          if (!cancelled) setQueues(qData);
+          return;
+        }
+      }
+      if (!cancelled) {
+        setConfirmingPayment(false);
+        setError('Payment is taking longer than usual. Refresh the page in a moment.');
+      }
+    };
+    poll();
+    return () => { cancelled = true; };
+  }, [tripId, confirmingPayment, location.search]);
 
   useEffect(() => {
     if (!trip?.id || tripExpired) return;
@@ -97,7 +144,8 @@ export default function TripQueues() {
     sessionStorage.setItem(`trip:${tripId}:participantId`, id);
   };
 
-  if (loading && !trip && !tripExpired) return <PageLayout><div className="flex items-center justify-center min-h-[40vh] text-[#7d6b8a]">Loading…</div></PageLayout>;
+  if (loading && !trip && !tripExpired && !confirmingPayment) return <PageLayout><div className="flex items-center justify-center min-h-[40vh] text-[#7d6b8a]">Loading…</div></PageLayout>;
+  if (confirmingPayment) return <PageLayout><div className="flex flex-col items-center justify-center min-h-[40vh] text-[#7d6b8a]"><p className="mb-2">Confirming your payment…</p><p className="text-sm">You’ll be redirected in a moment.</p></div></PageLayout>;
   if (tripExpired) return (
     <PageLayout>
       <div className="max-w-md mx-auto text-center">
@@ -107,7 +155,14 @@ export default function TripQueues() {
       </div>
     </PageLayout>
   );
-  if (!trip?.id) return <PageLayout><div className="flex items-center justify-center min-h-[40vh] text-[#7d6b8a]">Trip not found.</div></PageLayout>;
+  if (!trip?.id) return (
+    <PageLayout>
+      <div className="flex flex-col items-center justify-center min-h-[40vh] text-[#7d6b8a] text-center max-w-md mx-auto">
+        {error ? <p className="mb-4 text-[#5a4a6a]">{error}</p> : <p className="mb-4">Trip not found.</p>}
+        <Link to="/" className="text-[#f4a6b8] hover:underline font-medium">Back home</Link>
+      </div>
+    </PageLayout>
+  );
 
   return (
     <PageLayout>

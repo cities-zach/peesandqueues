@@ -14,10 +14,16 @@ export default function CreateTrip() {
   const [error, setError] = useState('');
   const [cancelled, setCancelled] = useState(false);
   const [inviteContacts, setInviteContacts] = useState([]);
+  const [checkoutRedirectUrl, setCheckoutRedirectUrl] = useState(null);
 
   useEffect(() => {
     if (searchParams.get('cancelled') === '1') setCancelled(true);
   }, [searchParams]);
+
+  useEffect(() => {
+    if (!checkoutRedirectUrl) return;
+    window.location.replace(checkoutRedirectUrl);
+  }, [checkoutRedirectUrl]);
 
   const addBathroom = () => setBathrooms((b) => [...b, { name: '' }]);
   const removeBathroom = (i) => setBathrooms((b) => b.filter((_, idx) => idx !== i));
@@ -59,16 +65,35 @@ export default function CreateTrip() {
       }
       if (!res.ok) throw new Error(data.error || 'Failed to create trip');
       if (data.checkoutUrl) {
-        window.location.href = data.checkoutUrl;
+        setCheckoutRedirectUrl(data.checkoutUrl);
         return;
       }
-      setResult(data);
+      if (data.inviteLink) {
+        setResult(data);
+        return;
+      }
+      setError('Payment couldn’t be started — Stripe didn’t return a checkout link. Please try again.');
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
   };
+
+  if (checkoutRedirectUrl) {
+    return (
+      <PageLayout>
+        <div className="max-w-lg mx-auto text-center">
+          <h1 className="text-2xl font-bold text-[#5a4a6a] mb-4">Redirecting to payment…</h1>
+          <p className="text-[#7d6b8a] mb-4">You should be taken to Stripe Checkout in a moment.</p>
+          <p className="text-[#7d6b8a] text-sm mb-4">If nothing happens, use this link:</p>
+          <a href={checkoutRedirectUrl} className="inline-block rounded-2xl bg-[#f4a6b8] text-[#5a4a6a] font-medium py-3 px-6 hover:bg-[#fad4dc] transition">
+            Open payment page
+          </a>
+        </div>
+      </PageLayout>
+    );
+  }
 
   if (result) {
     return (

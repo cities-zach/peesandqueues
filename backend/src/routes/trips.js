@@ -84,6 +84,9 @@ export async function tripsRoutes(fastify) {
       client_reference_id: trip.id,
       metadata: { tripId: trip.id },
     });
+    if (!session?.url) {
+      return reply.code(500).send({ error: 'Stripe did not return a checkout URL. Check your Stripe Price ID and account.' });
+    }
     await db.from('trips').update({ stripe_checkout_session_id: session.id }).eq('id', trip.id);
     return reply.send({ checkoutUrl: session.url, tripId: trip.id });
   });
