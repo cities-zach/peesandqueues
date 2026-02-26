@@ -36,7 +36,7 @@ export async function tripsRoutes(fastify) {
       return reply.code(400).send({ error: 'name and bathrooms (non-empty array) required' });
     }
     const origin = process.env.PUBLIC_ORIGIN || 'http://localhost:5173';
-    const priceId = process.env.STRIPE_PRICE_ID;
+    const priceId = process.env.STRIPE_TRIP_PRICE_ID || process.env.STRIPE_PRICE_ID;
 
     const discount = await validateDiscountCode(discountCode);
     if (discountCode !== undefined && discountCode !== null && String(discountCode).trim() !== '') {

@@ -69,7 +69,7 @@ If `CRON_SECRET` is not set, the endpoint still runs (no auth).
 | `PUBLIC_ORIGIN` | Public app origin for invite links (e.g. https://app.example.com) |
 | `STRIPE_SECRET_KEY` | Stripe secret key (for $1/trip checkout) |
 | `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret (for `checkout.session.completed`) |
-| `STRIPE_PRICE_ID` | Stripe Price ID for one-time $1 trip |
+| `STRIPE_TRIP_PRICE_ID` | Stripe Price ID for one-time $1 trip |
 | `CRON_SECRET` | Optional secret for `/api/cron/reminders` |
 
 ### Payments and discount codes
