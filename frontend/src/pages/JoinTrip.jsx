@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import PageLayout from '../components/PageLayout';
 
 export default function JoinTrip() {
   const { token } = useParams();
   const navigate = useNavigate();
   const [trip, setTrip] = useState(null);
+  const [tripExpired, setTripExpired] = useState(false);
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -15,10 +16,18 @@ export default function JoinTrip() {
   useEffect(() => {
     let cancelled = false;
     fetch(`/api/join/${token}`)
-      .then((r) => r.json())
+      .then(async (r) => {
+        const data = await r.json();
+        if (r.status === 410) return { expired: true, message: data.error };
+        return data;
+      })
       .then((data) => {
-        if (!cancelled && data.tripId) setTrip(data);
-        else if (!cancelled) setTrip(null);
+        if (cancelled) return;
+        if (data.expired) {
+          setTripExpired(true);
+          setTrip(null);
+        } else if (data.tripId) setTrip(data);
+        else setTrip(null);
       })
       .catch(() => !cancelled && setTrip(null))
       .finally(() => !cancelled && setLoading(false));
@@ -51,6 +60,15 @@ export default function JoinTrip() {
   };
 
   if (loading) return <PageLayout><div className="flex items-center justify-center min-h-[40vh] text-[#7d6b8a]">Loading…</div></PageLayout>;
+  if (tripExpired) return (
+    <PageLayout>
+      <div className="max-w-md mx-auto text-center">
+        <p className="text-[#5a4a6a] font-medium mb-2">This trip has ended.</p>
+        <p className="text-[#7d6b8a] text-sm mb-4">Trips are valid for 7 days. Ask your host for a new invite link or create your own trip.</p>
+        <Link to="/" className="text-[#f4a6b8] hover:underline font-medium">Back to home</Link>
+      </div>
+    </PageLayout>
+  );
   if (!trip) return <PageLayout><div className="flex items-center justify-center min-h-[40vh] text-[#7d6b8a]">Invalid or expired invite link.</div></PageLayout>;
 
   return (

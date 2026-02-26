@@ -5,6 +5,7 @@ import { tripsRoutes } from './routes/trips.js';
 import { joinRoutes } from './routes/join.js';
 import { queuesRoutes } from './routes/queues.js';
 import { twilioWebhook } from './webhooks/twilio.js';
+import { stripeWebhook } from './webhooks/stripe.js';
 
 const port = Number(process.env.PORT) || 3000;
 const origin = process.env.PUBLIC_ORIGIN || 'http://localhost:5173';
@@ -16,6 +17,7 @@ await fastify.register(tripsRoutes, { prefix: '/api' });
 await fastify.register(joinRoutes, { prefix: '/api' });
 await fastify.register(queuesRoutes, { prefix: '/api' });
 await fastify.register(twilioWebhook);
+await fastify.register(stripeWebhook);
 
 fastify.get('/api/health', async () => ({ ok: true }));
 

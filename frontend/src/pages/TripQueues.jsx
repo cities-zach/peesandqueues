@@ -8,20 +8,40 @@ export default function TripQueues() {
   const { tripId } = useParams();
   const location = useLocation();
   const [trip, setTrip] = useState(null);
+  const [tripExpired, setTripExpired] = useState(false);
   const [queues, setQueues] = useState([]);
   const [loading, setLoading] = useState(true);
   const [participantId, setParticipantId] = useState(() => location.state?.participantId || sessionStorage.getItem(`trip:${tripId}:participantId`) || '');
   const [error, setError] = useState('');
 
-  const fetchTrip = () => fetch(`/api/trips/${tripId}`).then((r) => r.json()).then(setTrip).catch(() => setTrip(null));
   const fetchQueues = () => fetch(`/api/trips/${tripId}/queues`).then((r) => r.json()).then(setQueues).catch(() => setQueues([]));
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([fetchTrip(), fetchQueues()]).finally(() => !cancelled && setLoading(false));
-    const interval = setInterval(() => { if (!cancelled) fetchQueues(); }, 8000);
-    return () => { cancelled = true; clearInterval(interval); };
+    const load = async () => {
+      const tripRes = await fetch(`/api/trips/${tripId}`);
+      const tripData = await tripRes.json();
+      if (cancelled) return;
+      if (tripRes.status === 410) {
+        setTripExpired(true);
+        setTrip(null);
+      } else if (tripData.id) {
+        setTrip(tripData);
+        const qRes = await fetch(`/api/trips/${tripId}/queues`);
+        const qData = await qRes.json();
+        if (!cancelled) setQueues(qData);
+      } else setTrip(null);
+      if (!cancelled) setLoading(false);
+    };
+    load();
+    return () => { cancelled = true; };
   }, [tripId]);
+
+  useEffect(() => {
+    if (!trip?.id || tripExpired) return;
+    const interval = setInterval(() => fetchQueues(), 8000);
+    return () => clearInterval(interval);
+  }, [tripId, trip?.id, tripExpired]);
 
   const joinQueue = async (bathroomId) => {
     if (!participantId.trim()) { setError('Set your participant ID below (from when you joined).'); return; }
@@ -77,7 +97,16 @@ export default function TripQueues() {
     sessionStorage.setItem(`trip:${tripId}:participantId`, id);
   };
 
-  if (loading && !trip) return <PageLayout><div className="flex items-center justify-center min-h-[40vh] text-[#7d6b8a]">Loading…</div></PageLayout>;
+  if (loading && !trip && !tripExpired) return <PageLayout><div className="flex items-center justify-center min-h-[40vh] text-[#7d6b8a]">Loading…</div></PageLayout>;
+  if (tripExpired) return (
+    <PageLayout>
+      <div className="max-w-md mx-auto text-center">
+        <p className="text-[#5a4a6a] font-medium mb-2">This trip has ended.</p>
+        <p className="text-[#7d6b8a] text-sm mb-4">Trips are valid for 7 days. Create a new trip to get a fresh queue.</p>
+        <Link to="/create" className="text-[#f4a6b8] hover:underline font-medium">Create a new trip</Link>
+      </div>
+    </PageLayout>
+  );
   if (!trip?.id) return <PageLayout><div className="flex items-center justify-center min-h-[40vh] text-[#7d6b8a]">Trip not found.</div></PageLayout>;
 
   return (

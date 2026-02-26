@@ -1,16 +1,23 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import PageLayout from '../components/PageLayout';
 import InviteLink from '../components/InviteLink';
 import ContactPickerButton from '../components/ContactPickerButton';
 
 export default function CreateTrip() {
+  const [searchParams] = useSearchParams();
   const [name, setName] = useState('');
   const [bathrooms, setBathrooms] = useState([{ name: '' }]);
+  const [discountCode, setDiscountCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
+  const [cancelled, setCancelled] = useState(false);
   const [inviteContacts, setInviteContacts] = useState([]);
+
+  useEffect(() => {
+    if (searchParams.get('cancelled') === '1') setCancelled(true);
+  }, [searchParams]);
 
   const addBathroom = () => setBathrooms((b) => [...b, { name: '' }]);
   const removeBathroom = (i) => setBathrooms((b) => b.filter((_, idx) => idx !== i));
@@ -30,7 +37,11 @@ export default function CreateTrip() {
       const res = await fetch('/api/trips', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: tripName, bathrooms: bathNames.map((name) => ({ name })) }),
+        body: JSON.stringify({
+          name: tripName,
+          bathrooms: bathNames.map((name) => ({ name })),
+          ...(discountCode.trim() && { discountCode: discountCode.trim() }),
+        }),
       });
       const text = await res.text();
       let data;
@@ -47,6 +58,10 @@ export default function CreateTrip() {
         return;
       }
       if (!res.ok) throw new Error(data.error || 'Failed to create trip');
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+        return;
+      }
       setResult(data);
     } catch (err) {
       setError(err.message);
@@ -82,6 +97,7 @@ export default function CreateTrip() {
     <PageLayout>
       <div className="max-w-lg mx-auto">
         <h1 className="text-2xl font-bold text-[#5a4a6a] mb-4">Create a trip</h1>
+        <p className="text-[#7d6b8a] text-sm mb-4">$1 per trip · Valid for 7 days. Use a discount code for free testing.</p>
         <form onSubmit={submit} className="space-y-4">
           <div>
             <label className="block text-[#7d6b8a] text-sm mb-1">Trip name</label>
@@ -113,6 +129,17 @@ export default function CreateTrip() {
               + Add bathroom
             </button>
           </div>
+          <div>
+            <label className="block text-[#7d6b8a] text-sm mb-1">Discount code (optional)</label>
+            <input
+              type="text"
+              value={discountCode}
+              onChange={(e) => setDiscountCode(e.target.value)}
+              placeholder="e.g. TEST100"
+              className="w-full rounded-xl bg-white/80 border border-[#e5dfed] text-[#5a4a6a] px-3 py-2 focus:ring-2 focus:ring-[#f4a6b8] placeholder:text-[#7d6b8a]/70"
+            />
+          </div>
+          {cancelled && <p className="text-[#7d6b8a] text-sm">Payment was cancelled. You can try again below.</p>}
           {error && <p className="text-[#f4a6b8] text-sm">{error}</p>}
           <button type="submit" disabled={loading} className="w-full rounded-2xl bg-[#f4a6b8] text-[#5a4a6a] font-medium py-3 hover:bg-[#fad4dc] transition disabled:opacity-50">
             {loading ? 'Creating…' : 'Create trip'}

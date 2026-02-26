@@ -1,4 +1,5 @@
 import { db } from '../lib/db.js';
+import { checkTripAccess } from '../lib/trip-access.js';
 import { joinQueue, doneQueue, leaveQueue, getQueuesForTrip } from '../lib/queue-engine.js';
 import { sendSms } from '../lib/sms.js';
 
@@ -11,6 +12,8 @@ export async function queuesRoutes(fastify) {
   // GET /trips/:tripId/queues — list queues for trip
   fastify.get('/trips/:tripId/queues', async (request, reply) => {
     const { tripId } = request.params;
+    const access = await checkTripAccess(tripId);
+    if (!access.allowed) return reply.code(access.code).send({ error: access.message });
     const { data: trip } = await db.from('trips').select('id').eq('id', tripId).single();
     if (!trip) return reply.code(404).send({ error: 'Trip not found' });
     const queues = await getQueuesForTrip(tripId);
@@ -20,6 +23,8 @@ export async function queuesRoutes(fastify) {
   // POST /trips/:tripId/queues/:bathroomId/join — body: participantId
   fastify.post('/trips/:tripId/queues/:bathroomId/join', async (request, reply) => {
     const { tripId, bathroomId } = request.params;
+    const access = await checkTripAccess(tripId);
+    if (!access.allowed) return reply.code(access.code).send({ error: access.message });
     const { participantId } = request.body || {};
     if (!participantId) return reply.code(400).send({ error: 'participantId required' });
     const { data: participant } = await db.from('participants').select('id').eq('id', participantId).eq('trip_id', tripId).single();
@@ -38,6 +43,8 @@ export async function queuesRoutes(fastify) {
   // POST /trips/:tripId/queues/:bathroomId/leave — body: participantId
   fastify.post('/trips/:tripId/queues/:bathroomId/leave', async (request, reply) => {
     const { tripId, bathroomId } = request.params;
+    const access = await checkTripAccess(tripId);
+    if (!access.allowed) return reply.code(access.code).send({ error: access.message });
     const { participantId } = request.body || {};
     if (!participantId) return reply.code(400).send({ error: 'participantId required' });
     const { data: participant } = await db.from('participants').select('id').eq('id', participantId).eq('trip_id', tripId).single();
@@ -60,6 +67,8 @@ export async function queuesRoutes(fastify) {
   // POST /trips/:tripId/queues/:bathroomId/done — body: participantId (must be current active)
   fastify.post('/trips/:tripId/queues/:bathroomId/done', async (request, reply) => {
     const { tripId, bathroomId } = request.params;
+    const access = await checkTripAccess(tripId);
+    if (!access.allowed) return reply.code(access.code).send({ error: access.message });
     const { participantId } = request.body || {};
     if (!participantId) return reply.code(400).send({ error: 'participantId required' });
     const { data: participant } = await db.from('participants').select('id').eq('id', participantId).eq('trip_id', tripId).single();

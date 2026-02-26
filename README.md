@@ -16,7 +16,7 @@ Real-time bathroom queue coordination for small groups (trips, cabins, retreats)
 Create a Supabase project and run the initial migration:
 
 - Open Supabase Dashboard → SQL Editor.
-- Run the contents of `backend/migrations/001_initial.sql`.
+- Run the contents of `backend/migrations/001_initial.sql`, then `backend/migrations/002_payments.sql`.
 
 ### 2. Backend
 
@@ -67,7 +67,18 @@ If `CRON_SECRET` is not set, the endpoint still runs (no auth).
 | `TWILIO_PHONE_NUMBER` | Twilio phone number (E.164) |
 | `PORT` | Backend port (default 3000) |
 | `PUBLIC_ORIGIN` | Public app origin for invite links (e.g. https://app.example.com) |
+| `STRIPE_SECRET_KEY` | Stripe secret key (for $1/trip checkout) |
+| `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret (for `checkout.session.completed`) |
+| `STRIPE_PRICE_ID` | Stripe Price ID for one-time $1 trip |
 | `CRON_SECRET` | Optional secret for `/api/cron/reminders` |
+
+### Payments and discount codes
+
+- Trips cost $1 and are valid for 7 days. After payment (Stripe Checkout), the trip is activated.
+- To create a **free** trip (e.g. for testing), add a 100% discount code in Supabase:  
+  `INSERT INTO discount_codes (code, type, percent_off, max_uses) VALUES ('TEST100', 'percent', 100, 100);`  
+  Then enter `TEST100` in the discount code field on Create Trip.
+- Stripe webhook: add endpoint `https://your-api-host/webhooks/stripe`, subscribe to `checkout.session.completed`, and set `STRIPE_WEBHOOK_SECRET` from the dashboard.
 
 ## SMS commands
 
